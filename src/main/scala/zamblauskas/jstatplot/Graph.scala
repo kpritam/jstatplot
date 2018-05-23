@@ -6,11 +6,12 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import org.sameersingh.scalaplot.Implicits._
 import org.sameersingh.scalaplot.Style.{Color, HistogramStyle}
 import org.sameersingh.scalaplot.gnuplot.GnuplotPlotter
-import org.sameersingh.scalaplot.{BarData, BarSeries, Chart}
-
+import org.sameersingh.scalaplot._
 import scalaz.\/
 import scalaz.effect.IO
 import scalaz.syntax.std.boolean._
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Graph with multiple series.
@@ -75,6 +76,26 @@ object Graph {
       val terminal = "pngcairo %s enhanced font 'Verdana,18'" format sizeString
       plotter.writeScriptFile(directory, filenamePrefix, terminal, "png")
       plotter.runGnuplot(directory, filenamePrefix)
+    }
+
+    pngcairo(destinationDir.getAbsolutePath + "/", prefix)
+  }.leftMap(e => s"An error occurred while creating plot '$prefix'\n${ExceptionUtils.getStackTrace(e)}") }
+
+  def mPlot(chart: Chart, prefix: String, destinationDir: File): IO[\/[Error, ArrayBuffer[String]]] = IO { \/.fromTryCatchNonFatal {
+    // XXX: GnuplotPlotter.png asserts dir name to end with `/`.
+    val plotter = new GnuplotPlotter(chart)
+
+    def pngcairo(directory: String, filenamePrefix: String): ArrayBuffer[String] = {
+      if (chart.monochrome) println("Warning: Monochrome ignored.")
+      val sizeString = if (chart.size.isDefined) "size %f,%f" format(chart.size.get._1, chart.size.get._2) else ""
+      val terminal = "pngcairo %s enhanced font 'Verdana,18'" format sizeString
+      plotter.plotChart(chart, terminal)
+      plotter.lines += "set terminal %s" format terminal
+      chart match {
+        case xyc: XYChart => plotter.plotXYChart(xyc)
+        case bc: BarChart => plotter.plotBarChart(bc)
+      }
+      plotter.lines
     }
 
     pngcairo(destinationDir.getAbsolutePath + "/", prefix)
