@@ -67,7 +67,17 @@ object Graph {
     */
   def plot(chart: Chart, prefix: String, destinationDir: File): IO[\/[Error, Unit]] = IO { \/.fromTryCatchNonFatal {
     // XXX: GnuplotPlotter.png asserts dir name to end with `/`.
-    new GnuplotPlotter(chart).png(destinationDir.getAbsolutePath + "/", prefix)
+    val plotter = new GnuplotPlotter(chart)
+
+    def pngcairo(directory: String, filenamePrefix: String) {
+      if (chart.monochrome) println("Warning: Monochrome ignored.")
+      val sizeString = if (chart.size.isDefined) "size %f,%f" format(chart.size.get._1, chart.size.get._2) else ""
+      val terminal = "pngcairo %s enhanced font 'Verdana,18'" format sizeString
+      plotter.writeScriptFile(directory, filenamePrefix, terminal, "png")
+      plotter.runGnuplot(directory, filenamePrefix)
+    }
+
+    pngcairo(destinationDir.getAbsolutePath + "/", prefix)
   }.leftMap(e => s"An error occurred while creating plot '$prefix'\n${ExceptionUtils.getStackTrace(e)}") }
 
   private def xAxisName(graphWidth: Double, timestamps: Seq[Double]): Int => String = { idx =>
@@ -79,5 +89,7 @@ object Graph {
       timestamps.lift(idx).map(_.toString)
     ).flatten.getOrElse("")
   }
+
+
 
 }
