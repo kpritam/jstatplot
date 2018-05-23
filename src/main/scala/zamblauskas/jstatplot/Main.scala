@@ -16,9 +16,10 @@ object Main {
     Config.parser.parse(args, Config()).foreach { config =>
       val graphRange = config.graphRangeYTo.map(YRange(0, _))
       val graphSize = GraphSize(config.graphWidth, config.graphHeight)
+      val titleSuffix = if (! config.titleSuffix.isEmpty) s" [${config.titleSuffix}]" else config.titleSuffix
       val results = config.jstatResults.map { file =>
         for {
-          result <- createGraph(file, config.skipNumLines, graphRange, graphSize, config.sizeUnit)
+          result <- createGraph(file, titleSuffix, config.skipNumLines, graphRange, graphSize, config.sizeUnit)
           output <- result match {
             case -\/(err) => IO.putStrLn(err)
             case \/-(())  => IO.putStrLn(s"Plotted '$file'.")
@@ -29,11 +30,7 @@ object Main {
     }
   }
 
-  private def createGraph(jstatResult: File,
-                          skipNumLines: Int,
-                          yRange: Option[YRange],
-                          size: GraphSize,
-                          sizeUnit: SizeUnit): IO[String \/ Unit] = {
+  private def createGraph(jstatResult: File, titleSuffix: String, skipNumLines: Int, yRange: Option[YRange], size: GraphSize, sizeUnit: SizeUnit) = {
 
     def plot[A](title: String, h: Seq[Data[A]])(implicit g: Graph[A]): IO[String \/ Unit] = {
       val chart = Graph.createChart(title, yRange, size, h)
@@ -53,10 +50,10 @@ object Main {
     def plotJstat[H <: Heap](csv: String)(implicit g: Graph[H], cr: ColumnReads[JStat[H]]): EitherT[IO, String, Unit] = {
       for {
         lines <- eitherT(parse(csv))
-        _     <- eitherT(plot("Heap Capacity", lines.map(j => Data(j.timestamp, j.capacity))))
-        _     <- eitherT(plot("Heap Utilization", lines.map(j => Data(j.timestamp, j.utilization))))
-        _     <- eitherT(plot("Number of GC events", lines.map(j => Data(j.timestamp, j.gcEvents))))
-        _     <- eitherT(plot("GC time", lines.map(j => Data(j.timestamp, j.gcTime))))
+        _     <- eitherT(plot(s"Heap Capacity$titleSuffix", lines.map(j => Data(j.timestamp, j.capacity))))
+        _     <- eitherT(plot(s"Heap Utilization$titleSuffix", lines.map(j => Data(j.timestamp, j.utilization))))
+        _     <- eitherT(plot(s"Number of GC events$titleSuffix", lines.map(j => Data(j.timestamp, j.gcEvents))))
+        _     <- eitherT(plot(s"GC time$titleSuffix", lines.map(j => Data(j.timestamp, j.gcTime))))
       } yield ()
     }
 

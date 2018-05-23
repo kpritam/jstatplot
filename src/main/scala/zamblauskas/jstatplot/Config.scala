@@ -23,14 +23,7 @@ case object GB extends SizeUnit("GB", _.inGigabytes)
 /**
   * CLI configuration params.
   */
-case class Config(
-   jstatResults: List[File] = List.empty,
-   graphWidth: Int = 720,
-   graphHeight: Int = 480,
-   skipNumLines: Int = 0,
-   sizeUnit: SizeUnit = MB,
-   graphRangeYTo: Option[Int] = None
-)
+case class Config(jstatResults: List[File] = List.empty, titleSuffix: String = "", graphWidth: Int = 1680, graphHeight: Int = 1050, skipNumLines: Int = 0, sizeUnit: SizeUnit = MB, graphRangeYTo: Option[Int] = None)
 
 object Config {
   val parser = new OptionParser[Config]("jstatplot") {
@@ -54,6 +47,14 @@ object Config {
       if(w > 0) success
       else failure("'width' should be > 0")
     }.text("Graph width")
+
+
+    opt[String]('t', "title").action { (t, c) =>
+      c.copy(titleSuffix = t)
+    }.validate { t =>
+      if(! t.isEmpty) success
+      else failure("'title' should not be empty")
+    }.text("Graph title")
 
     opt[Int]('h', "height").action { (h, c) =>
       c.copy(graphHeight = h)
