@@ -91,6 +91,8 @@ object Graph {
       val terminal = "pngcairo %s enhanced font 'Verdana,18'" format sizeString
       plotter.plotChart(chart, terminal)
       plotter.lines += "set terminal %s" format terminal
+      plotter.directory = directory
+      plotter.filename = filenamePrefix
       chart match {
         case xyc: XYChart => plotter.plotXYChart(xyc)
         case bc: BarChart => plotter.plotBarChart(bc)
